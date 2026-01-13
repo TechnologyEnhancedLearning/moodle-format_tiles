@@ -301,7 +301,7 @@ class behat_format_tiles extends behat_base {
      * @throws Exception
      */
     public function i_toggle_expand_collapse_section_for_edit($tileumber) {
-        $tileid = behat_context_helper::escape("collapssesectionid" . $tileumber);
+        $tileid = behat_context_helper::escape("collapssesection" . $tileumber);
 
         // Click the tile.
         $this->wait_for_pending_js();
@@ -456,7 +456,7 @@ class behat_format_tiles extends behat_base {
     public function i_hide_tile($sectionnumber) {
         // Ensures the section exists.
         $xpath = $this->tile_exists($sectionnumber);
-        $this->i_show_hide($sectionnumber, 'hide', $xpath);
+        $this->i_show_hide($sectionnumber, 'hidefromothers', $xpath);
     }
 
     /**
@@ -485,7 +485,7 @@ class behat_format_tiles extends behat_base {
         // If javascript is on, link is inside a menu.
         if ($this->running_javascript()) {
             $fullxpath = $xpath
-                . "/descendant::div[contains(@class, 'section-actions')]/descendant::a[contains(@data-bs-toggle, 'dropdown')]";
+                . "/descendant::div[contains(@class, 'section-actions')]/descendant::a[contains(@data-toggle, 'dropdown')]";
             $exception = new \Behat\Mink\Exception\ExpectationException(
                 'Tile "' . $sectionnumber . '" edit menu was not found', $this->getSession()
             );

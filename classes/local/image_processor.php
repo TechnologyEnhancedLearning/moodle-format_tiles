@@ -79,7 +79,8 @@ class image_processor {
             if (isset($tempfile)) {
                 unset($tempfile);
             }
-            debugging('Format tiles image exception: ' . $e->getMessage(), DEBUG_DEVELOPER);
+            debugging('Format tiles image exception:...', DEBUG_DEVELOPER);
+            debugging($e->getMessage(), DEBUG_DEVELOPER);
             return false;
         }
         return false;
@@ -161,8 +162,9 @@ class image_processor {
         $dstx = floor(($requestedwidth - $targetwidth) / 2);
         $dsty = floor(($requestedheight - $targetheight) / 2);
 
-        imagecopyresampled($finalimage, $original, $dstx, $dsty, 0, 0, $targetwidth, $targetheight, $originalwidth,
+        imagecopybicubic($finalimage, $original, $dstx, $dsty, 0, 0, $targetwidth, $targetheight, $originalwidth,
             $originalheight);
+
         ob_start();
         switch($imageparams['function']) {
             case 'imagejpeg':

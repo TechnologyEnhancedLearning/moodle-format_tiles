@@ -27,8 +27,8 @@
  */
 
 define(["jquery", "core/templates", "core/ajax", "format_tiles/browser_storage",
-        "core/notification", "core/str", "format_tiles/tile_fitter", 'core/fragment', 'core_filters/events'],
-    function ($, Templates, ajax, browserStorage, Notification, str, tileFitter, Fragment, FilterEvents) {
+        "core/notification", "core/str", "format_tiles/tile_fitter", 'core/fragment'],
+    function ($, Templates, ajax, browserStorage, Notification, str, tileFitter, Fragment) {
         "use strict";
 
         var isMobile;
@@ -211,12 +211,12 @@ define(["jquery", "core/templates", "core/ajax", "format_tiles/browser_storage",
                 subSections.each((i) => {
                     const subSection = $(subSections[i]);
                     if (subSection.find('.course-content-item-content.collapse').length) {
-                        const subSectionId = subSection.find('a[data-bs-toggle="collapse"]').data('subSectionId');
+                        const subSectionId = subSection.find('a[data-toggle="collapse"]').data('subSectionId');
                         // If the user has previously expanded the section, its ID will be in expandedSubSectionIds.
                         const shouldBeExpanded = expandedSubSectionIds[subSectionId] !== undefined;
                         if (shouldBeExpanded) {
                             // We are manipulating the new HTML before it's added to the DOM so cannot use .collapse('show').
-                            subSection.find('a[data-bs-toggle="collapse"]')
+                            subSection.find('a[data-toggle="collapse"]')
                                 .removeClass('collapsed').attr('aria-expanded', true);
                             subSection.find('.course-content-item-content')
                                 .addClass('show').addClass('collapse').removeClass('collapsing');
@@ -228,7 +228,7 @@ define(["jquery", "core/templates", "core/ajax", "format_tiles/browser_storage",
 
                 // In the new content area, check for any expand or collapse of sub-sections.
                 // Keep a local record of which are expanded.
-                contentArea.find('li.modtype_subsection a[data-bs-toggle="collapse"]').on(Event.CLICK, (e) => {
+                contentArea.find('li.modtype_subsection a[data-toggle="collapse"]').on(Event.CLICK, (e) => {
                     const clickedButton = $(e.currentTarget);
                     const subSectionId = clickedButton.data('subSectionId');
                     const subSectionContent = $('#coursecontentcollapse' + subSectionId);
@@ -291,11 +291,11 @@ define(["jquery", "core/templates", "core/ajax", "format_tiles/browser_storage",
                 }
 
                 if (!isMobile) {
-                    // Activate tooltips for any "restricted" items in this content.
+                    // Activate tooltips for completion toggle and any "restricted" items in this content.
                     setTimeout(function () {
                         // Manual forms, auto icons and "Restricted until ..." etc.
                         try {
-                            const tooltipItems = contentArea.find(".availabilityinfo .badge");
+                            const tooltipItems = contentArea.find(".badge-info");
                             if (tooltipItems.length > 0 && typeof tooltipItems.tooltip == 'function') {
                                 tooltipItems.tooltip();
                             }
@@ -320,23 +320,30 @@ define(["jquery", "core/templates", "core/ajax", "format_tiles/browser_storage",
                         }
                     });
                 }, 100);
-
-                FilterEvents.notifyFilterContentUpdated(contentArea);
             }
             setTimeout(() => {
                 if (js) {
                     // User may be opening same section multiple times so avoid adding same script again.
                     const head = $('head');
                     const existingScripts = head.find('script').filter(
-                        (index, script) => {return $(script).html() === js;}
+                        (index, script) => {
+                            return $(script).html() === js;
+                        }
                     );
                     if (existingScripts.length === 0) {
                         Templates.runTemplateJS(js);
                     }
                 }
 
+                applyMathJax(contentArea);
+
                 const moodleVideos = contentArea.find(Selector.MOODLE_VIDEO);
                 if (moodleVideos.length > 0) {
+                    // This already happens once on page load, but we repeat since reloaded HTML containing lazy load videos.
+                    require(["media_videojs/loader"], function (videoJS) {
+                        videoJS.setUp();
+                    });
+
                     // Issue 87 - If video fullscreen button is pressed, temporarily disable tile re-orgs on screen resize.
                     const fsEvents = ['fullscreenchange', 'webkitfullscreenchang', 'mozfullscreenchange', 'msfullscreenchange'];
                     fsEvents.forEach(function (ev) {
@@ -359,6 +366,26 @@ define(["jquery", "core/templates", "core/ajax", "format_tiles/browser_storage",
             });
         };
 
+        /**
+         * Find Mathjax equations in a content area and queue them for processing.
+         * @param {Object} contentArea the jquery object for the content area
+         */
+        const applyMathJax = function(contentArea) {
+            if (typeof window.MathJax !== "undefined") {
+                try {
+                    const mathJaxElems = contentArea.find(Selector.MATHJAX_EQUATION);
+                    if (mathJaxElems.length) {
+                        mathJaxElems.each((i, node) => {
+                            window.MathJax.Hub.Queue(["Typeset", window.MathJax.Hub, node]);
+                        });
+                    }
+                } catch (err) {
+                    require(["core/log"], function (log) {
+                        log.debug(err);
+                    });
+                }
+            }
+        };
 
         /**
          * Expand a content containing section (e.g. on tile click)

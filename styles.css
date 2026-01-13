@@ -34,13 +34,25 @@
 .format-tiles.format-tiles-high-contrast .course-content ul.tiles .tile.tilestyle-2.selected {
     box-shadow: 0 0 20px 10px var(--format-tiles-high-contrast-black);
 }
+.format-tiles .embed_cm_modal .modal-header {
+    background-color: var(--format-tiles-colour);
+}
 .format-tiles ul.tiles .current .sectiontitle::after {
     background-color: red;
 }
-.format-tiles .sectiontitle::after {
+.format-tiles .embed_cm_modal .modal-header h5,
+.format-tiles .embed_cm_modal .modal-header h4 {
+    color: #fff;
+}
+.format-tiles .embed_cm_modal .modal-header .btn-close {
+    color: #fff;
+    opacity: 0.8;
+}
+.format-tiles .badge-info {
     background-color: var(--format-tiles-colour);
 }
-.format-tiles .course-content .single-section .navigation-arrows .navigation-arrow:not(.dimmed):hover {
+.format-tiles .course-content .single-section .navigation-arrows .navigation-arrow:not(.dimmed):hover,
+.format-tiles .embed_cm_modal .embed_file_button:hover {
     background-color: var(--format-tiles-colour-1);
 }
 .format-tiles.single-section-page #course-header {
@@ -451,8 +463,6 @@
     border-radius: 100%;
     width: 105px;
     height: 105px;
-    max-width: 105px;
-    max-height: 105px;
     text-align: center;
     margin-top: 25px;
 }
@@ -575,6 +585,17 @@
 .format-tiles .sectionbutton img.icon {
     width: 18px;
     height: 18px;
+}
+.format-tiles .pagesechead {
+    max-width: calc(100% - 115px);
+    min-height: 60px;
+    z-index: 1;
+    position: relative;
+    display: inline-block;
+    /*z-index needs to be behind navigation-arrows as they may overlap*/
+}
+.format-tiles #single_section_tiles .pagesechead {
+    max-width: calc(100% - 175px);
 }
 .format-tiles .sectionbuttons {
     position: relative;
@@ -930,7 +951,7 @@ body.jsenabled.format-tiles #collapsiblesec0 {
 }
 .format-tiles .sectiontitlecontainer {
     margin: 0 0 0.5em 0.5em;
-    min-width: 70%;
+    display: inline-block;
 }
 
 .format-tiles .sectiontitle {
@@ -1119,6 +1140,8 @@ body.jsenabled.format-tiles #collapsiblesec0 {
     min-height: 23px;
 }
 .format-tiles .embed_cm_modal button[data-action="toggle-manual-completion"] {
+    color: #fff;
+    border-color: #fff;
     padding: 2px 5px 0 5px;
 }
 .format-tiles .modal-container .modal .modal-header.embed_cm_modal h3 {
@@ -1127,7 +1150,6 @@ body.jsenabled.format-tiles #collapsiblesec0 {
 /*Different themes have these classes slightly differently so repeat some of these*/
 .format-tiles .embed_cm_modal .modal-header {
     padding: 5px 10px 5px 10px;
-    justify-content: space-between;
 }
 .format-tiles .modal-container.embed_cm_modal .modal .modal-header h3 {
     color: #fff;
@@ -1375,7 +1397,6 @@ body.jsenabled.format-tiles #collapsiblesec0 {
     opacity: 0.9;
     text-align: center;
     box-shadow: none;
-    color: var(--bs-btn-close-color);
 }
 .format-tiles .modal-container .modal .modal-header button.btn-close {
     font-size: 1.8em;
@@ -1404,9 +1425,16 @@ body.jsenabled.format-tiles #collapsiblesec0 {
 .format-tiles .embed-module-buttons form:focus {
     outline: 1px dotted;
 }
+.format-tiles .embed-module-buttons .icon:hover,
+.format-tiles .embed-module-buttons img.icon:hover {
+    opacity: 0.7;
+}
 .format-tiles .embed-module-buttons .btn {
     box-shadow: none;
     margin-top: 2px;
+}
+.format-tiles .embed-module-buttons a .icon {
+    color: #fff;
 }
 .format-tiles .embed_cm_modal .embed-module-buttons .completioncheckbox .icon {
     padding: 0;
@@ -2044,6 +2072,9 @@ body.jsenabled.format-tiles #collapsiblesec0 {
     body.jsenabled.format-tiles .section-zero-empty .above-tiles-buttons {
         min-width: 50px;
     }
+    .format-tiles #single_section_tiles .pagesechead {
+        max-width: calc(100% - 175px);
+    }
 }
 
 @media screen and (max-width: 680px) {
@@ -2119,6 +2150,10 @@ allow tiles to be taller and thinner so can fit two side by side in portrait on 
     }
     .format-tiles .subtiles .course-content ul.section {
         padding: 0.5em 0.5em 0.5em 1em;
+    }
+    .format-tiles .pagesechead {
+        max-width: unset;
+        margin: 0 0 0 5px;
     }
     .format-tiles .sectiontitlecontainer {
         /* stylelint-disable-next-line declaration-no-important */

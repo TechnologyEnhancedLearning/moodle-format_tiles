@@ -1007,41 +1007,25 @@ function format_tiles_output_fragment_get_cm_list(array $args): string {
     $section = $DB->get_record('course_sections', ['id' => $sectionid]);
     if (!$section) {
         throw new moodle_exception(
-            'invalidsectionid',
-            'format_tiles',
-            '',
-            $sectionid,
-            "Section ID '$sectionid' not found"
+            'invalidsectionid', 'format_tiles', '', $sectionid, "Section ID '$sectionid' not found"
         );
     }
     $course = get_course($section->course);
-    if (!can_access_course($course, null, '', true)) {
-        throw new require_login_exception('Course is not available');
-    }
+
     if ($course->format != 'tiles') {
         throw new moodle_exception(
-            'invalidsectionid',
-            'format_tiles',
-            '',
-            $sectionid,
-            "Course '$course->id' is not a tiles course"
+            'invalidsectionid', 'format_tiles', '',
+            $sectionid, "Course '$course->id' is not a tiles course"
         );
     }
 
+    // We don't need to check course context permission as fragment API does that.
     // But we should check that the user can see this specific section as may be hidden.
     $modinfo = get_fast_modinfo($course);
     $sectioninfo = $modinfo->get_section_info($section->section, MUST_EXIST);
     if (!$sectioninfo->uservisible) {
         $format = course_get_format($course);
         throw new moodle_exception('notavailablecourse', '', '', $format->get_section_name($sectioninfo));
-    }
-
-    try {
-        // Mathjax loader was refactored in core commit 84338a47 (Moodle 5.1, May 2025).
-        // Add this to avoid equations failing when tiles are closed/re-opened.
-        $PAGE->requires->should_create_one_time_item_now('filter_mathjaxloader-scripts');
-    } catch (\Exception $e) {
-        debugging('Could not set Mathjax loader created', DEBUG_DEVELOPER);
     }
 
     $renderer = $PAGE->get_renderer('format_tiles');
@@ -1070,10 +1054,11 @@ function format_tiles_output_fragment_get_cm_content(array $args): string {
             "Invalid context level " . $modcontext->contextlevel . ' for ID ' . $args['contextid']
         );
     }
-    [$course, $mod] = get_course_and_cm_from_cmid($modcontext->instanceid);
-    if (!can_access_course($course, null, '', true) || !$mod->uservisible) {
-        throw new require_login_exception('Activity is not available');
-    }
+
+    $coursecontext = $modcontext->get_course_context();
+    $mod = get_fast_modinfo($coursecontext->instanceid)->get_cm($modcontext->instanceid);
+    require_capability('mod/' . $mod->modname . ':view', $modcontext);
+
     if ($mod) {
         $allowedmodules = explode(",", get_config('format_tiles', 'modalmodules'));
         $treataslabel = $mod->has_custom_cmlist_item();
@@ -1086,21 +1071,16 @@ function format_tiles_output_fragment_get_cm_content(array $args): string {
         try {
             // Issue #153 avoid multiple glossary auto link JS onclick events.
             $PAGE->requires->should_create_one_time_item_now('filter_glossary_autolinker');
+
         } catch (\Exception $e) {
             debugging('Could not set glossary autolink created', DEBUG_DEVELOPER);
-        }
-        try {
-            // Mathjax loader was refactored in core commit 84338a47 (Moodle 5.1, May 2025).
-            // Add this to avoid equations failing when tiles are closed/re-opened.
-            $PAGE->requires->should_create_one_time_item_now('filter_mathjaxloader-scripts');
-        } catch (\Exception $e) {
-            debugging('Could not set Mathjax loader created', DEBUG_DEVELOPER);
         }
         if ($mod->modname == 'page') {
             // Record from the page table.
             $record = $DB->get_record($mod->modname, ['id' => $mod->instance]);
+            list($course, $cm) = get_course_and_cm_from_cmid($mod->id);
             require_once("$CFG->dirroot/mod/page/lib.php");
-            page_view($record, $course, $mod, $modcontext);
+            page_view($record, $course, $cm, $modcontext);
             return \format_tiles\local\util::format_cm_content_text($mod->modname, $record, $modcontext);
         }
         if ($treataslabel) {

@@ -166,11 +166,12 @@ if ($mform->is_cancelled()) {
                 }
                 $tempfile->delete();
             } catch (Exception $e) {
+                debugging('Cannot set file', DEBUG_DEVELOPER);
+                debugging($e->getMessage(), DEBUG_DEVELOPER);
                 if (isset($tempfile)) {
                     $tempfile->delete();
                     unset($tempfile);
                 }
-                debugging('Cannot set file: ' . $e->getMessage() . " | " . $e->getTraceAsString(), DEBUG_DEVELOPER);
             }
         }
     }

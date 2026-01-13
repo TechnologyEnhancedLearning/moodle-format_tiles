@@ -308,12 +308,20 @@ class course_output implements \renderable, \templatable {
      */
     protected function temp_course_section_cm_availability($mod) {
         if ($this->courseformatoptions['courseusesubtiles']) {
-            // Subtiles show a badge on the tile including full info.
+            // Subtiles show a badge on the tile with a tool tip including full info.
             // This needs not to be truncated, whereas core $availabilityclass below will truncate it.
             // If there are multiple restrictions the tooltip on the subtile then shows them all.
             $ci = new \core_availability\info_module($mod);
             $fullinfo = $ci->get_full_information();
-            return \core_availability\info::format_info($fullinfo, $this->course);
+            $description = \core_availability\info::format_info($fullinfo, $this->course);
+            if ($this->moodlerelease == 4.1) {
+                // In Moodle 4.1 activities with multiple restrictions are shown with a show more link.
+                // As that approach now deprecated, this is a quick/sub-optimal fix to remove "show more" link and un-hide items.
+                $description = str_replace('d-none', '', $description);
+                return str_replace('d-block showmore', 'd-none', $description);
+            } else {
+                return $description;
+            }
         }
         $availabilityclass = $this->format->get_output_classname('content\\cm\\availability');
         $availability = new $availabilityclass(
@@ -475,7 +483,6 @@ class course_output implements \renderable, \templatable {
         // If user can view hidden items, include the explanation as to why an item is hidden.
         if ($this->canviewhidden) {
             $data['availabilitymessage'] = self::temp_section_availability_message($thissection);
-            $data['hasavailability'] = $data['availabilitymessage'] !== null;
         }
         if ($isdelegatedsection) {
             $data['isdelegatedsection'] = true;
@@ -523,6 +530,10 @@ class course_output implements \renderable, \templatable {
             $phototileextraclasses = '';
         }
 
+        $maxallowedsections = $this->format->get_max_sections();
+        $sectioncountwarningissued = false;
+
+        $previoustiletitle = '';
         $countincludedsections = 0;
         $uselinebreakfilter = get_config('format_tiles', 'enablelinebreakfilter');
         $secsall = $this->modinfo->get_section_info_all();
@@ -539,6 +550,28 @@ class course_output implements \renderable, \templatable {
             // Show the section if the user is permitted to access it, OR if it's not available
             // but there is some available info text which explains the reason & should display,
             // OR it is hidden but the course has a setting to display hidden sections as unavilable.
+
+            // If we have sections with numbers greater than the max allowed, do not show them unless teacher.
+            // (Showing more to editors allows editor to fix them).
+            if ($countincludedsections >= $maxallowedsections) {
+                if (!$data['canedit']) {
+                    // Do not show them to students at all.
+                    break;
+                } else {
+                    if (!$sectioncountwarningissued) {
+                        $a = new \stdClass();
+                        $a->max = $maxallowedsections;
+                        $a->tilename = $previoustiletitle;
+                        \core\notification::error(get_string('coursetoomanysections', 'format_tiles', $a));
+                        $sectioncountwarningissued = true;
+                    }
+                    if ($countincludedsections > $maxallowedsections * 2) {
+                        // Even if the user is editing, if we have a *very* large number of sections, we only show 2 x that number.
+                        $data['showsectioncountwarning'] = true;
+                        break;
+                    }
+                }
+            }
 
             $isphototile = $allowedphototiles && in_array($section->id, $phototileids);
             $showsection = $section->uservisible ||
@@ -635,14 +668,15 @@ class course_output implements \renderable, \templatable {
                 }
                 // See below about when "hide add cm control" is true.
                 $newtile['hideaddcmcontrol'] = false;
-                $newtile['single_sec_add_cm_control_html'] = $this->courserenderer->section_add_cm_controls(
-                    $this->format, $section
+                $newtile['single_sec_add_cm_control_html'] = $this->courserenderer->course_section_add_cm_control(
+                    $this->course, $section->section, 0
                 );
 
                 $newtile['is_expanded'] = false;
 
                 // Finally add tile we constructed to the array.
                 $data['tiles'][] = $newtile;
+                $previoustiletitle = $title;
             } else if ($sectionnum == 0) {
                 // Add in section zero completion data to overall completion count.
                 if ($section->visible && $this->completionenabled) {
@@ -677,7 +711,7 @@ class course_output implements \renderable, \templatable {
         }
         $data['has_filter_buttons'] = !empty($data['filternumberedbuttons']) || !empty($data['filteroutcomebuttons']);
 
-        $data['section_zero_add_cm_control_html'] = $this->courserenderer->section_add_cm_controls($this->format, $secsall[0]);
+        $data['section_zero_add_cm_control_html'] = $this->courserenderer->course_section_add_cm_control($this->course, 0, 0);
         if ($this->completionenabled && $data['overall_progress']['num_out_of'] > 0) {
             if (get_config('format_tiles', 'showoverallprogress')) {
                 $data['overall_progress_indicator'] = $this->completion_indicator(
@@ -835,10 +869,7 @@ class course_output implements \renderable, \templatable {
         $displayoptions = [];
         $obj = new \core_courseformat\output\local\content\section\cmitem($this->format, $section, $mod, $displayoptions);
         $moduleobject = (array)$obj->export_for_template($output);
-        if (!$mod->is_of_type_that_can_display()) {
-            $moduleobject['uservisible'] = false;
-            $moduleobject['clickable'] = false;
-        } else if ($this->canviewhidden) {
+        if ($this->canviewhidden) {
             $moduleobject['uservisible'] = true;
             $moduleobject['clickable'] = true;
         } else if (!$mod->uservisible && $mod->is_visible_on_course_page() && $mod->availableinfo && $mod->visible) {
