@@ -146,11 +146,11 @@ class content extends content_base {
         global $DB, $CFG;
         require_once("$CFG->dirroot/mod/folder/lib.php");
         $inlinefolder = $DB->get_record_sql(
-            "SELECT cm.id, f.name
+            "SELECT TOP 1 cm.id, f.name
             FROM {folder} f
             JOIN {course_modules} cm ON cm.instance = f.id
             JOIN {modules} m ON m.id = cm.module and m.name = 'folder'
-            WHERE f.course = :courseid and f.display = :display LIMIT 1",
+            WHERE f.course = :courseid and f.display = :display",
             ['courseid' => $courseid, 'display' => FOLDER_DISPLAY_INLINE]
         );
         if ($inlinefolder) {
